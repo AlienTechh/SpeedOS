@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SpeedOS Emulator</title>
     <style>
         * {
@@ -25,12 +25,14 @@
             justify-content: center;
             align-items: center;
             touch-action: none;
+            position: fixed; /* Prevents mobile browser overscroll bounce */
         }
 
         /* Phone Frame */
         .phone-frame {
             width: 350px;
             height: 700px;
+            max-height: 95vh;
             background-color: #000000;
             border-radius: 30px;
             padding: 7px;
@@ -108,7 +110,7 @@
             z-index: 10;
         }
 
-        /* Home Screen Grid with Shrink Animation */
+        /* Home Screen Grid */
         .home-screen {
             flex: 1;
             padding: 24px 18px;
@@ -133,6 +135,7 @@
             align-items: center;
             cursor: pointer;
             transition: transform 0.2s ease;
+            touch-action: manipulation;
         }
 
         .app-icon:active {
@@ -203,6 +206,7 @@
             padding: 16px;
             overflow-y: auto;
             touch-action: pan-y;
+            -webkit-overflow-scrolling: touch;
         }
 
         /* Settings UI */
@@ -256,6 +260,7 @@
             font-size: 18px;
             font-weight: 600;
             cursor: pointer;
+            touch-action: manipulation;
         }
 
         .calc-btn:active {
@@ -310,6 +315,7 @@
             cursor: pointer;
             background-color: #3b82f6;
             color: white;
+            touch-action: manipulation;
         }
 
         /* Weather UI */
@@ -370,11 +376,12 @@
             border: 4px solid #38bdf8;
             margin: 0 auto;
             cursor: pointer;
+            touch-action: manipulation;
         }
 
-        /* Navigation Bar */
+        /* Navigation Bar Touch Area Optimized for Mobile */
         .nav-bar {
-            height: 24px;
+            height: 36px;
             width: 100%;
             background-color: transparent;
             display: flex;
@@ -385,6 +392,7 @@
             left: 0;
             z-index: 30;
             cursor: pointer;
+            touch-action: none; /* Prevents browser scroll interference on mobile touch */
         }
 
         .gesture-line {
@@ -393,6 +401,7 @@
             background-color: #ffffff;
             border-radius: 2px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            pointer-events: none;
         }
     </style>
 </head>
@@ -578,9 +587,8 @@
         
         let activeApp = null;
 
-        // Open App Immediately without blocking locks
+        // Open App Immediately
         function openApp(appId, iconElement) {
-            // Close any currently active app instantly if one is open
             if (activeApp) {
                 activeApp.classList.remove('open');
             }
@@ -601,7 +609,7 @@
             activeApp = appWindow;
         }
 
-        // Close App Immediately without blocking locks
+        // Close App Immediately
         function closeApp() {
             if (activeApp) {
                 activeApp.classList.remove('open');
@@ -611,24 +619,30 @@
             }
         }
 
-        // Touch Swipe Gesture
+        // Phone-Optimized Touch Gesture Handling (prevents page pull/scroll)
         let startY = 0;
+
         navBar.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevents mobile browser pull-to-refresh & page dragging
             startY = e.touches[0].clientY;
-        });
+        }, { passive: false });
+
+        navBar.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // Lock mobile screen scrolling during swipe gesture
+        }, { passive: false });
 
         navBar.addEventListener('touchend', (e) => {
             let endY = e.changedTouches[0].clientY;
-            if (startY - endY > 30) {
+            if (startY - endY > 20) { // Slightly lower threshold for faster mobile swipe recognition
                 closeApp();
             }
         });
 
-        // Mouse Drag Support
+        // Mouse Drag Support for Desktop
         navBar.addEventListener('mousedown', (e) => {
             startY = e.clientY;
             const onMouseMove = (moveEvent) => {
-                if (startY - moveEvent.clientY > 30) {
+                if (startY - moveEvent.clientY > 20) {
                     closeApp();
                     cleanup();
                 }
