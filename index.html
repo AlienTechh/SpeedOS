@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SpeedOS Emulator</title>
     <style>
         * {
@@ -11,24 +11,31 @@
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
             user-select: none;
+            -webkit-user-select: none;
+            /* Disable Blue Tap Highlight on Mobile Browsers */
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
         }
 
-        body {
-            background: #111827;
+        /* Prevent Website Scroll Entirely */
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #090d16;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            overflow: hidden;
+            touch-action: none;
         }
 
-        /* Pixel 6 Frame: Boxy corners with slightly thinner black bezels */
+        /* Pixel 6 Frame: Boxy corners with thin black bezels */
         .phone-frame {
             width: 350px;
             height: 700px;
             background-color: #000000;
-            border-radius: 30px; /* Pixel 6 corner radius */
-            padding: 7px; /* Thinner black bezel frame */
+            border-radius: 30px;
+            padding: 7px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 2px #1f2937;
             position: relative;
             display: flex;
@@ -38,13 +45,29 @@
         /* Screen Container */
         .os-screen {
             flex: 1;
-            /* Normal wallpaper (stock Android landscape style) */
-            background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80') center/cover no-repeat;
-            border-radius: 23px; /* Adjusted to fit the thinner bezel nicely */
+            border-radius: 23px;
             position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
+        }
+
+        /* Dynamic Wallpaper Element for Smooth Zoom Animation */
+        .wallpaper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80') center/cover no-repeat;
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: scale(1);
+            z-index: 0;
+        }
+
+        /* Wallpaper Zoom when an App is Open */
+        .wallpaper.zoomed {
+            transform: scale(1.15);
         }
 
         /* Dark Overlay for Wallpaper Readability */
@@ -54,11 +77,12 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.25);
             z-index: 1;
+            pointer-events: none;
         }
 
-        /* Center Punch Hole Camera (z-index 50 keeps it visible over open apps) */
+        /* Center Punch Hole Camera (Remains Visible Above Apps) */
         .punch-hole {
             position: absolute;
             top: 10px;
@@ -114,7 +138,8 @@
         .app-icon-img {
             width: 56px;
             height: 56px;
-            background-color: #ffffff;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
             border-radius: 16px;
             display: flex;
             justify-content: center;
@@ -131,7 +156,7 @@
             text-shadow: 0 1px 4px rgba(0,0,0,0.8);
         }
 
-        /* Settings App Window */
+        /* Generic App Window Base Style */
         .app-window {
             position: absolute;
             top: 0;
@@ -142,7 +167,7 @@
             display: flex;
             flex-direction: column;
             
-            /* Slow Zoom Animation & Dynamic Radius Matching Inner Screen */
+            /* Zoom Animation & Dynamic Radius */
             transform: scale(0);
             opacity: 0;
             border-radius: 16px;
@@ -174,8 +199,10 @@
             flex: 1;
             padding: 16px;
             overflow-y: auto;
+            touch-action: pan-y;
         }
 
+        /* Settings App UI */
         .setting-item {
             background-color: #1e293b;
             border: 1px solid #334155;
@@ -192,6 +219,91 @@
         .setting-value {
             color: #94a3b8;
             font-size: 13px;
+        }
+
+        /* Calculator App UI */
+        .calc-display {
+            background-color: #020617;
+            color: #ffffff;
+            font-size: 32px;
+            text-align: right;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            border: 1px solid #1e293b;
+            min-height: 70px;
+            word-break: break-all;
+        }
+
+        .calc-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .calc-btn {
+            background-color: #1e293b;
+            color: #f8fafc;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .calc-btn:active {
+            background-color: #334155;
+        }
+
+        .calc-btn.op {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .calc-btn.op:active {
+            background-color: #2563eb;
+        }
+
+        /* Notes App UI */
+        .note-textarea {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border: none;
+            color: #f8fafc;
+            font-size: 15px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+        }
+
+        /* Clock / Timer App UI */
+        .clock-display {
+            text-align: center;
+            font-size: 44px;
+            font-weight: 700;
+            color: #38bdf8;
+            margin: 30px 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .clock-controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .clock-btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            background-color: #3b82f6;
+            color: white;
         }
 
         /* Navigation Gesture Bar */
@@ -222,19 +334,35 @@
 
     <div class="phone-frame">
         <div class="os-screen" id="osScreen">
+            <div class="wallpaper" id="wallpaper"></div>
             <div class="wallpaper-overlay"></div>
             
             <div class="punch-hole"></div>
 
             <div class="status-bar">
-                <span>9:41</span>
+                <span id="currentTime">09:41</span>
                 <span>SpeedOS</span>
             </div>
 
             <div class="home-screen">
-                <div class="app-icon" id="settingsIcon" onclick="openSettings(this)">
+                <div class="app-icon" onclick="openApp('settingsApp', this)">
                     <div class="app-icon-img">⚙️</div>
                     <div class="app-label">Settings</div>
+                </div>
+
+                <div class="app-icon" onclick="openApp('calcApp', this)">
+                    <div class="app-icon-img">🧮</div>
+                    <div class="app-label">Calculator</div>
+                </div>
+
+                <div class="app-icon" onclick="openApp('notesApp', this)">
+                    <div class="app-icon-img">📝</div>
+                    <div class="app-label">Notes</div>
+                </div>
+
+                <div class="app-icon" onclick="openApp('clockApp', this)">
+                    <div class="app-icon-img">⏱️</div>
+                    <div class="app-label">Stopwatch</div>
                 </div>
             </div>
 
@@ -251,7 +379,7 @@
                     </div>
                     <div class="setting-item">
                         <span>Wallpaper & style</span>
-                        <span class="setting-value">Default ›</span>
+                        <span class="setting-value">Fluid Aurora ›</span>
                     </div>
                     <div class="setting-item">
                         <span>Battery</span>
@@ -259,7 +387,50 @@
                     </div>
                     <div class="setting-item">
                         <span>About Phone</span>
-                        <span class="setting-value">SpeedOS 1.0</span>
+                        <span class="setting-value">SpeedOS 2.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="app-window" id="calcApp">
+                <div class="app-header">Calculator</div>
+                <div class="app-content">
+                    <div class="calc-display" id="calcDisplay">0</div>
+                    <div class="calc-grid">
+                        <button class="calc-btn" onclick="calcClear()">C</button>
+                        <button class="calc-btn" onclick="calcInput('/')">/</button>
+                        <button class="calc-btn" onclick="calcInput('*')">*</button>
+                        <button class="calc-btn op" onclick="calcInput('-')">-</button>
+                        <button class="calc-btn" onclick="calcInput('7')">7</button>
+                        <button class="calc-btn" onclick="calcInput('8')">8</button>
+                        <button class="calc-btn" onclick="calcInput('9')">9</button>
+                        <button class="calc-btn op" onclick="calcInput('+')">+</button>
+                        <button class="calc-btn" onclick="calcInput('4')">4</button>
+                        <button class="calc-btn" onclick="calcInput('5')">5</button>
+                        <button class="calc-btn" onclick="calcInput('6')">6</button>
+                        <button class="calc-btn op" onclick="calcEqual()">=</button>
+                        <button class="calc-btn" onclick="calcInput('1')">1</button>
+                        <button class="calc-btn" onclick="calcInput('2')">2</button>
+                        <button class="calc-btn" onclick="calcInput('3')">3</button>
+                        <button class="calc-btn" onclick="calcInput('0')">0</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="app-window" id="notesApp">
+                <div class="app-header">Notes</div>
+                <div class="app-content">
+                    <textarea class="note-textarea" placeholder="Type your notes here..."></textarea>
+                </div>
+            </div>
+
+            <div class="app-window" id="clockApp">
+                <div class="app-header">Stopwatch</div>
+                <div class="app-content">
+                    <div class="clock-display" id="timerDisplay">00:00.0</div>
+                    <div class="clock-controls">
+                        <button class="clock-btn" onclick="toggleTimer()" id="timerStartBtn">Start</button>
+                        <button class="clock-btn" style="background-color: #64748b;" onclick="resetTimer()">Reset</button>
                     </div>
                 </div>
             </div>
@@ -272,32 +443,39 @@
     </div>
 
     <script>
-        const settingsApp = document.getElementById('settingsApp');
         const osScreen = document.getElementById('osScreen');
+        const wallpaper = document.getElementById('wallpaper');
         const navBar = document.getElementById('navBar');
+        let activeApp = null;
 
-        // Open Settings with position-based zoom animation
-        function openSettings(iconElement) {
+        // Open App with Icon Zoom & Wallpaper Zoom
+        function openApp(appId, iconElement) {
+            const appWindow = document.getElementById(appId);
             const screenRect = osScreen.getBoundingClientRect();
             const iconRect = iconElement.getBoundingClientRect();
 
             const originX = (iconRect.left + iconRect.width / 2) - screenRect.left;
             const originY = (iconRect.top + iconRect.height / 2) - screenRect.top;
 
-            settingsApp.style.setProperty('--origin-x', `${originX}px`);
-            settingsApp.style.setProperty('--origin-y', `${originY}px`);
+            appWindow.style.setProperty('--origin-x', `${originX}px`);
+            appWindow.style.setProperty('--origin-y', `${originY}px`);
 
-            settingsApp.classList.add('open');
+            appWindow.classList.add('open');
+            wallpaper.classList.add('zoomed');
+            activeApp = appWindow;
         }
 
-        // Close app with swipe up
+        // Close App with Swipe Up & Wallpaper Scale Restore
         function closeApp() {
-            settingsApp.classList.remove('open');
+            if (activeApp) {
+                activeApp.classList.remove('open');
+                wallpaper.classList.remove('zoomed');
+                activeApp = null;
+            }
         }
 
-        // Touch swipe up detection
+        // Touch Swipe Gesture Handling
         let startY = 0;
-
         navBar.addEventListener('touchstart', (e) => {
             startY = e.touches[0].clientY;
         });
@@ -309,25 +487,85 @@
             }
         });
 
-        // Mouse drag detection for desktop testing
+        // Mouse Drag Support for Desktop
         navBar.addEventListener('mousedown', (e) => {
             startY = e.clientY;
-            
             const onMouseMove = (moveEvent) => {
                 if (startY - moveEvent.clientY > 30) {
                     closeApp();
                     cleanup();
                 }
             };
-
             const cleanup = () => {
                 window.removeEventListener('mousemove', onMouseMove);
                 window.removeEventListener('mouseup', cleanup);
             };
-
             window.addEventListener('mousemove', onMouseMove);
             window.addEventListener('mouseup', cleanup);
         });
+
+        // Live Clock in Status Bar
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('currentTime').innerText = `${hours}:${minutes}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        /* Calculator Functionality */
+        let calcVal = '0';
+        function calcInput(char) {
+            if (calcVal === '0') calcVal = char;
+            else calcVal += char;
+            document.getElementById('calcDisplay').innerText = calcVal;
+        }
+        function calcClear() {
+            calcVal = '0';
+            document.getElementById('calcDisplay').innerText = calcVal;
+        }
+        function calcEqual() {
+            try {
+                calcVal = String(eval(calcVal));
+            } catch {
+                calcVal = 'Error';
+            }
+            document.getElementById('calcDisplay').innerText = calcVal;
+        }
+
+        /* Stopwatch Functionality */
+        let timerInterval = null;
+        let elapsedTenths = 0;
+        function toggleTimer() {
+            const btn = document.getElementById('timerStartBtn');
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                btn.innerText = 'Start';
+                btn.style.backgroundColor = '#3b82f6';
+            } else {
+                timerInterval = setInterval(() => {
+                    elapsedTenths++;
+                    const mins = String(Math.floor(elapsedTenths / 600)).padStart(2, '0');
+                    const secs = String(Math.floor((elapsedTenths % 600) / 10)).padStart(2, '0');
+                    const tenths = elapsedTenths % 10;
+                    document.getElementById('timerDisplay').innerText = `${mins}:${secs}.${tenths}`;
+                }, 100);
+                btn.innerText = 'Stop';
+                btn.style.backgroundColor = '#ef4444';
+            }
+        }
+        function resetTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                document.getElementById('timerStartBtn').innerText = 'Start';
+                document.getElementById('timerStartBtn').style.backgroundColor = '#3b82f6';
+            }
+            elapsedTenths = 0;
+            document.getElementById('timerDisplay').innerText = '00:00.0';
+        }
     </script>
 
 </body>
