@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpeedOS Emulator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background: #111827;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Pixel 6 Frame: Boxy corners with slightly thinner black bezels */
+        .phone-frame {
+            width: 350px;
+            height: 700px;
+            background-color: #000000;
+            border-radius: 30px; /* Pixel 6 corner radius */
+            padding: 7px; /* Thinner black bezel frame */
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 2px #1f2937;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Screen Container */
+        .os-screen {
+            flex: 1;
+            /* Normal wallpaper (stock Android landscape style) */
+            background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80') center/cover no-repeat;
+            border-radius: 23px; /* Adjusted to fit the thinner bezel nicely */
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Dark Overlay for Wallpaper Readability */
+        .wallpaper-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            z-index: 1;
+        }
+
+        /* Center Punch Hole Camera (z-index 50 keeps it visible over open apps) */
+        .punch-hole {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 13px;
+            height: 13px;
+            background-color: #000000;
+            border-radius: 50%;
+            z-index: 50;
+            box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 36px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 18px;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 600;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+            z-index: 10;
+        }
+
+        /* Home Screen Grid */
+        .home-screen {
+            flex: 1;
+            padding: 24px 18px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px 12px;
+            align-content: start;
+            z-index: 5;
+        }
+
+        .app-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .app-icon:active {
+            transform: scale(0.9);
+        }
+
+        .app-icon-img {
+            width: 56px;
+            height: 56px;
+            background-color: #ffffff;
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            font-size: 26px;
+        }
+
+        .app-label {
+            color: #ffffff;
+            font-size: 11px;
+            margin-top: 6px;
+            font-weight: 500;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+        }
+
+        /* Settings App Window */
+        .app-window {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0f172a;
+            display: flex;
+            flex-direction: column;
+            
+            /* Slow Zoom Animation & Dynamic Radius Matching Inner Screen */
+            transform: scale(0);
+            opacity: 0;
+            border-radius: 16px;
+            pointer-events: none;
+            transform-origin: var(--origin-x, 50%) var(--origin-y, 50%);
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), 
+                        opacity 0.6s ease, 
+                        border-radius 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 20;
+        }
+
+        .app-window.open {
+            transform: scale(1);
+            opacity: 1;
+            border-radius: 23px;
+            pointer-events: auto;
+        }
+
+        .app-header {
+            padding: 42px 20px 16px 20px;
+            background-color: #1e293b;
+            border-bottom: 1px solid #334155;
+            font-size: 20px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .app-content {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .setting-item {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #f1f5f9;
+        }
+
+        .setting-value {
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        /* Navigation Gesture Bar */
+        .nav-bar {
+            height: 24px;
+            width: 100%;
+            background-color: transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            z-index: 30;
+            cursor: pointer;
+        }
+
+        .gesture-line {
+            width: 100px;
+            height: 4px;
+            background-color: #ffffff;
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="phone-frame">
+        <div class="os-screen" id="osScreen">
+            <div class="wallpaper-overlay"></div>
+            
+            <div class="punch-hole"></div>
+
+            <div class="status-bar">
+                <span>9:41</span>
+                <span>SpeedOS</span>
+            </div>
+
+            <div class="home-screen">
+                <div class="app-icon" id="settingsIcon" onclick="openSettings(this)">
+                    <div class="app-icon-img">⚙️</div>
+                    <div class="app-label">Settings</div>
+                </div>
+            </div>
+
+            <div class="app-window" id="settingsApp">
+                <div class="app-header">Settings</div>
+                <div class="app-content">
+                    <div class="setting-item">
+                        <span>Network & Internet</span>
+                        <span class="setting-value">Wi-Fi ›</span>
+                    </div>
+                    <div class="setting-item">
+                        <span>Connected devices</span>
+                        <span class="setting-value">Bluetooth ›</span>
+                    </div>
+                    <div class="setting-item">
+                        <span>Wallpaper & style</span>
+                        <span class="setting-value">Default ›</span>
+                    </div>
+                    <div class="setting-item">
+                        <span>Battery</span>
+                        <span class="setting-value">98%</span>
+                    </div>
+                    <div class="setting-item">
+                        <span>About Phone</span>
+                        <span class="setting-value">SpeedOS 1.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nav-bar" id="navBar">
+                <div class="gesture-line"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const settingsApp = document.getElementById('settingsApp');
+        const osScreen = document.getElementById('osScreen');
+        const navBar = document.getElementById('navBar');
+
+        // Open Settings with position-based zoom animation
+        function openSettings(iconElement) {
+            const screenRect = osScreen.getBoundingClientRect();
+            const iconRect = iconElement.getBoundingClientRect();
+
+            const originX = (iconRect.left + iconRect.width / 2) - screenRect.left;
+            const originY = (iconRect.top + iconRect.height / 2) - screenRect.top;
+
+            settingsApp.style.setProperty('--origin-x', `${originX}px`);
+            settingsApp.style.setProperty('--origin-y', `${originY}px`);
+
+            settingsApp.classList.add('open');
+        }
+
+        // Close app with swipe up
+        function closeApp() {
+            settingsApp.classList.remove('open');
+        }
+
+        // Touch swipe up detection
+        let startY = 0;
+
+        navBar.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+        });
+
+        navBar.addEventListener('touchend', (e) => {
+            let endY = e.changedTouches[0].clientY;
+            if (startY - endY > 30) {
+                closeApp();
+            }
+        });
+
+        // Mouse drag detection for desktop testing
+        navBar.addEventListener('mousedown', (e) => {
+            startY = e.clientY;
+            
+            const onMouseMove = (moveEvent) => {
+                if (startY - moveEvent.clientY > 30) {
+                    closeApp();
+                    cleanup();
+                }
+            };
+
+            const cleanup = () => {
+                window.removeEventListener('mousemove', onMouseMove);
+                window.removeEventListener('mouseup', cleanup);
+            };
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', cleanup);
+        });
+    </script>
+
+</body>
+</html>
