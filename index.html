@@ -163,7 +163,7 @@
             text-shadow: 0 1px 4px rgba(0,0,0,0.8);
         }
 
-        /* App Window */
+        /* App Window - Completely Opaque Background Fix */
         .app-window {
             position: absolute;
             top: 0;
@@ -175,21 +175,26 @@
             flex-direction: column;
             
             transform: scale(0);
-            opacity: 0;
+            opacity: 1; /* Keep fully opaque during scaling transition */
+            visibility: hidden; /* Hide cleanly when closed */
             border-radius: 16px;
             pointer-events: none;
             transform-origin: var(--origin-x, 50%) var(--origin-y, 50%);
             transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), 
-                        opacity 0.9s ease, 
-                        border-radius 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+                        border-radius 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+                        visibility 0s 1.2s; /* Delayed hide when closing */
             z-index: 20;
         }
 
         .app-window.open {
             transform: scale(1);
             opacity: 1;
+            visibility: visible;
             border-radius: 23px;
             pointer-events: auto;
+            transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), 
+                        border-radius 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+                        visibility 0s 0s; /* Immediately visible when opening */
         }
 
         .app-header {
